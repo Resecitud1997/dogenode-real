@@ -330,4 +330,242 @@ const App = {
                             ${tx.type === 'withdrawal' ? 'Retiro' : tx.type === 'earning' ? 'Ganancia' : 'Transacción'}
                         </p>
                         <p class="text-sm text-gray-500">${Utils.formatDateShort(tx.createdAt || tx.timestamp)}</p>
-                        ${tx
+                        ${tx.txHash ? <p class="text-xs text-gray-400 font-mono">${tx.txHash.substring(0, 16)}...</p> : ''}
+${tx.status === 'pending' ? '<p class="text-xs text-yellow-600">Procesando...</p>' : ''}
+</div>
+</div>
+<div class="text-right">
+<p class="font-bold ${tx.type === 'withdrawal' ? 'text-red-600' : 'text-green-600'}">
+${tx.type === 'withdrawal' ? '-' : '+'} ${Utils.formatDogeShort(tx.amount || tx.netAmount)} DOGE
+</p>
+<span class="inline-block px-2 py-1 text-xs rounded ${
+                     tx.status === 'completed' ? 'bg-green-100 text-green-700' :
+                     tx.status === 'pending' || tx.status === 'processing' ? 'bg-yellow-100 text-yellow-700' :
+                     'bg-red-100 text-red-700'
+                 }">
+${tx.status === 'completed' ? 'Completado' :
+tx.status === 'pending' ? 'Pendiente' :
+tx.status === 'processing' ? 'Procesando' : 'Fallido'}
+</span>
+<a href="${tx.explorerUrl}" target="_blank" class="block text-xs text-blue-500 hover:text-blue-600 mt-1">                             Ver en explorer <i class="fas fa-external-link-alt"></i>                         </a>                     : ''}
+</div>
+</div>
+`).join('');
+},
+// ==================
+// SISTEMA DE REFERIDOS
+// ==================
+
+async setupReferralSystem() {
+    if (!Wallet.userId) return;
+
+    const referrals = Storage.getReferrals();
+    const referralLink = `${window.location.origin}${window.location.pathname}?ref=${referrals.code}`;
+    
+    const linkInput = document.getElementById('referralLink');
+    const modalLinkInput = document.getElementById('modalReferralLink');
+    
+    if (linkInput) linkInput.value = referralLink;
+    if (modalLinkInput) modalLinkInput.value = referralLink;
+
+    // Verificar si viene por referido
+    const urlParams = new URLSearchParams(window.location.search);
+    const refCode = urlParams.get('ref');
+    
+    if (refCode && refCode !== referrals.code) {
+        console.log('Usuario referido por:', refCode);
+        Storage.set('referredBy', refCode);
+        
+        // Aquí podrías registrar el referido en el backend
+        // await api.registerReferral(Wallet.userId, refCode);
+    }
+},
+
+// ==================
+// ACTUALIZAR PRECIO DE DOGE
+// ==================
+
+async updateDogePrice() {
+    try {
+        const response = await api.getDogePrice();
+        
+        if (response.success) {
+            this.dogePrice = response.data.price;
+            console.log(`💰 Precio de DOGE actualizado: $${this.dogePrice}`);
+            this.updateStats();
+        }
+    } catch (error) {
+        console.error('Error actualizando precio de DOGE:', error);
+        // Usar precio por defecto
+        this.dogePrice = 0.08;
+    }
+},
+
+// ==================
+// EVENT LISTENERS
+// ==================
+
+setupEventListeners() {
+    // Eventos ya configurados en las funciones globales
+    console.log('✅ Event listeners configurados');
+}
+};
+// ==================
+// FUNCIONES GLOBALES
+// ==================
+function toggleMining() {
+App.toggleMining();
+}
+async function openWithdrawModal() {
+if (!Wallet.connected) {
+Utils.showError('Debes conectar tu wallet primero');
+    // Ofrecer conectar wallet
+    if (confirm('¿Quieres conectar tu wallet ahora?')) {
+        await Wallet.connect('dogecore');
+    }
+    return;
+}
+
+const modal = document.getElementById('withdrawModal');
+modal.classList.add('active');
+}
+function closeWithdrawModal() {
+const modal = document.getElementById('withdrawModal');
+modal.classList.remove('active');
+document.getElementById('withdrawAddress').value = '';
+document.getElementById('withdrawAmount').value = '';
+}
+async function processWithdraw(event) {
+event.preventDefault();
+const address = document.getElementById('withdrawAddress').value.trim();
+const amount = parseFloat(document.getElementById('withdrawAmount').value);
+
+if (!Utils.isValidDogeAddress(address)) {
+    Utils.showError('Dirección de Dogecoin inválida');
+    return;
+}
+
+if (!Utils.isValidAmount(amount) || amount < 10) {
+    Utils.showError('Cantidad inválida. Mínimo 10 DOGE');
+    return;
+}
+
+const user = Storage.getUser();
+if (user.balance < amount) {
+    Utils.showError('Saldo insuficiente');
+    return;
+}
+
+// Confirmar retiro
+const estimateResponse = await api.estimateWithdrawal(amount);
+
+if (estimateResponse.success) {
+    const estimate = estimateResponse.data;
+    const confirmMessage = `
+¿Confirmas el retiro?
+Cantidad: ${amount} DOGE
+Fee: ${estimate.fee} DOGE
+Total: ${estimate.totalAmount} DOGE
+Recibirás: ${estimate.youWillReceive} DOGE
+Tiempo estimado: ${estimate.estimatedTime}
+`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+}
+
+// Procesar retiro con backend real
+const success = await Wallet.withdraw(address, amount);
+
+if (success) {
+    closeWithdrawModal();
+}
+}
+function openReferralModal() {
+const modal = document.getElementById('referralModal');
+modal.classList.add('active');
+}
+function closeReferralModal() {
+const modal = document.getElementById('referralModal');
+modal.classList.remove('active');
+}
+function copyReferralLink() {
+const input = document.getElementById('referralLink');
+Utils.copyToClipboard(input.value);
+}
+function copyModalReferralLink() {
+const input = document.getElementById('modalReferralLink');
+Utils.copyToClipboard(input.value);
+}
+function shareTwitter() {
+const link = document.getElementById('modalReferralLink').value;
+const text = '¡Únete a DogeNode y gana Dogecoin real compartiendo tu ancho de banda! 🐕💰';
+Utils.shareTwitter(text, link);
+}
+function shareFacebook() {
+const link = document.getElementById('modalReferralLink').value;
+Utils.shareFacebook(link);
+}
+function shareWhatsApp() {
+const link = document.getElementById('modalReferralLink').value;
+const text = '¡Únete a DogeNode y gana Dogecoin real! 🐕💰';
+Utils.shareWhatsApp(text, link);
+}
+function viewAllTransactions() {
+// Redirigir a página de transacciones o mostrar modal
+if (Wallet.connected) {
+window.open(#transactions, '_self');
+App.loadTransactions();
+} else {
+Utils.showInfo('Conecta tu wallet para ver el historial completo');
+}
+}
+async function manageWallet() {
+if (Wallet.connected) {
+if (confirm('¿Deseas desconectar tu wallet?')) {
+Wallet.disconnect();
+}
+} else {
+// Mostrar opciones de wallet
+const walletType = prompt('Selecciona tu wallet:\n1. Dogecoin Core\n2. MetaMask\n\nIngresa 1 o 2:');
+    if (walletType === '1') {
+        await Wallet.connect('dogecore');
+    } else if (walletType === '2') {
+        await Wallet.connect('metamask');
+    }
+}
+}
+function showExtensionInstructions() {
+const instructions = `
+  alert(`📥 Instrucciones de Instalación:
+1. Descarga la extensión desde nuestro repositorio
+2. Abre Chrome y ve a chrome://extensions
+3. Activa "Modo de desarrollador"
+4. Haz clic en "Cargar extensión sin empaquetar"
+5. Selecciona la carpeta de la extensión
+6. ¡Listo! Recarga esta página`);
+}
+// Cerrar modales al hacer clic fuera
+window.onclick = function(event) {
+    const withdrawModal = document.getElementById('withdrawModal');
+    const referralModal = document.getElementById('referralModal');
+    
+    if (event.target === withdrawModal) {
+        closeWithdrawModal();
+    }
+    if (event.target === referralModal) {
+        closeReferralModal();
+    }
+};
+// ==================
+// INICIALIZAR APP
+// ==================
+
+document.addEventListener('DOMContentLoaded', () => {
+    App.init();
+});
+
+console.log('🎮 Aplicación cargada');
+```
+---
+
