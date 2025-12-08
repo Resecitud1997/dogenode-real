@@ -33,12 +33,16 @@ app.use(helmet());
 
 // CORS
 app.use(cors({
-    origin: 'http://localhost:3286'
+    origin: 'https://dogenode-real.pages.dev'
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// 2. MIDDLEWARE ESTÁNDAR
+app.use(express.json()); // para manejar cuerpos JSON
+// ... tus rutas y otra lógica
 
 // Rate limiting
 const limiter = rateLimit({
@@ -64,6 +68,12 @@ if (config.server.environment === 'development') {
 } else {
     app.use(morgan('combined'));
 }
+
+// 3. INICIO DEL SERVIDOR (Ejemplo en el puerto 3000)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Servidor escuchando en el puerto ${PORT}`);
+});
 
 // ========================
 // CONEXIÓN A MONGODB
