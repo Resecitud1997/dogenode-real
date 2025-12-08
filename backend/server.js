@@ -7,6 +7,9 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const mongoose = require('mongoose');
 const config = require('./config/config');
+const express = require('express');
+const cors = require('cors'); // Requerir la librería
+const app = express();
 
 // Importar rutas
 const walletRoutes = require('./routes/wallet');
