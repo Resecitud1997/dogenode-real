@@ -32,13 +32,15 @@ const PORT = config.server.port;
 app.use(helmet());
 
 // CORS
-app.use(cors({
-    origin: 'https://dogenode-real.pages.dev'
+const io = new Server(server, {
+    cors: {
+   origin: "https://dogenode-real.pages.dev", // ¡Debe ser el dominio completo!
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}));
+}
+});
 
 // 2. MIDDLEWARE ESTÁNDAR
 app.use(express.json()); // para manejar cuerpos JSON
