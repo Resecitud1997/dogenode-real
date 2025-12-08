@@ -34,7 +34,7 @@ app.use(helmet());
 // CORS
 const io = new Server(server, {
     cors: {
-   origin: "https://dogenode-real.pages.dev", // ¡Debe ser el dominio completo!
+   origin: 'http://localhost:3000'
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
